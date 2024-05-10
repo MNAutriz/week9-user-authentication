@@ -1,22 +1,21 @@
-/*
-  Created by: Claizel Coubeili Cepe
-  Date: updated April 26, 2023
-  Description: Sample todo app with Firebase 
-*/
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/todo_model.dart';
 import '../providers/todo_provider.dart';
 
+// TodoModal widget for adding, editing, or deleting a todo item
 class TodoModal extends StatelessWidget {
-  final String type;
-  final Todo? item;
+  String type; // Type of operation: Add, Edit, or Delete
   final TextEditingController _formFieldController = TextEditingController();
 
-  TodoModal({super.key, required this.type, required this.item});
+  // Constructor
+  TodoModal({
+    Key? key,
+    required this.type,
+  });
 
-  // Method to show the title of the modal depending on the functionality
+  // Build the title of the modal based on the type
   Text _buildTitle() {
     switch (type) {
       case 'Add':
@@ -30,59 +29,50 @@ class TodoModal extends StatelessWidget {
     }
   }
 
-  // Method to build the content or body depending on the functionality
+  // Build the content of the modal based on the type
   Widget _buildContent(BuildContext context) {
     switch (type) {
       case 'Delete':
         {
           return Text(
-            "Are you sure you want to delete '${item!.title}'?",
+            "Are you sure you want to delete '${context.read<TodoListProvider>().selected.title}'?",
           );
         }
-      // Edit and add will have input field in them
       default:
         return TextField(
           controller: _formFieldController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder()),
         );
     }
   }
 
+  // Define the action of the dialog based on the type
   TextButton _dialogAction(BuildContext context) {
     return TextButton(
       onPressed: () {
         switch (type) {
           case 'Add':
             {
-              // Instantiate a todo objeect to be inserted, default userID will be 1, the id will be the next id in the list
+              context.read<MyAuthProvider>().fetchAuthentication();
               Todo temp = Todo(
-                  userId: 1,
+                  userId: context.read<MyAuthProvider>().getCurrentUserID(),
                   completed: false,
                   title: _formFieldController.text);
 
               context.read<TodoListProvider>().addTodo(temp);
-
-              // Remove dialog after adding
               Navigator.of(context).pop();
               break;
             }
           case 'Edit':
             {
-              context
-                  .read<TodoListProvider>()
-                  .editTodo(item!.id!, _formFieldController.text);
-
-              // Remove dialog after editing
+              String newTitle = _formFieldController.text;
+              context.read<TodoListProvider>().editTodo(newTitle);
               Navigator.of(context).pop();
               break;
             }
           case 'Delete':
             {
-              context.read<TodoListProvider>().deleteTodo(item!.id!);
-
-              // Remove dialog after editing
+              context.read<TodoListProvider>().deleteTodo();
               Navigator.of(context).pop();
               break;
             }
@@ -100,8 +90,6 @@ class TodoModal extends StatelessWidget {
     return AlertDialog(
       title: _buildTitle(),
       content: _buildContent(context),
-
-      // Contains two buttons - add/edit/delete, and cancel
       actions: <Widget>[
         _dialogAction(context),
         TextButton(

@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "97869778981",
-    "project_id": "week9-user-authentication",
-    "storage_bucket": "week9-user-authentication.appspot.com"
+    "project_number": "5491058705",
+    "project_id": "week8-firebase23",
+    "storage_bucket": "week8-firebase23.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:97869778981:android:ed5cc80da6f5f59089efcc",
+        "mobilesdk_app_id": "1:5491058705:android:85fae5dde7b5d47f08e9b0",
+        "android_client_info": {
+          "package_name": "com.example.cmsc23sampleproj"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ5exCHaA6pZp3i6ysoWSRoOvw8u5XtN0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:5491058705:android:b887a05d7382a7e308e9b0",
         "android_client_info": {
           "package_name": "com.example.week9_authentication"
         }
@@ -15,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC6heRq0Ed-GWb_Dnfi67VRz4QTeJRHp08"
+          "current_key": "AIzaSyCQ5exCHaA6pZp3i6ysoWSRoOvw8u5XtN0"
         }
       ],
       "services": {

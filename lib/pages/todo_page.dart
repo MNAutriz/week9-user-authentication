@@ -1,25 +1,87 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../pages/user_details_page.dart';
+import '../pages/modal_todo.dart';
+import '../pages/login.dart';
 import '../models/todo_model.dart';
-import '../providers/auth_provider.dart';
+import '../providers/credential_provider.dart';
 import '../providers/todo_provider.dart';
-import 'modal_todo.dart';
-import 'user_details_page.dart';
+import '../providers/auth_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+// TodoPage widget for managing todo items
 class TodoPage extends StatefulWidget {
-  const TodoPage({super.key});
+  const TodoPage({Key? key}) : super(key: key);
 
   @override
   State<TodoPage> createState() => _TodoPageState();
 }
 
 class _TodoPageState extends State<TodoPage> {
+  late TextEditingController _newTitleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _newTitleController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _newTitleController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    Stream<QuerySnapshot> todosStream = context.watch<TodoListProvider>().todo;
+    late String userId;
+    Stream<QuerySnapshot> todosStream = context.watch<TodoListProvider>().todos;
+    Stream<User?> userStream = context.watch<MyAuthProvider>().uStream;
+
+    return StreamBuilder(
+        stream: userStream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Text("Error encountered! ${snapshot.error}"),
+            );
+          } else if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else if (!snapshot.hasData) {
+            return const LoginPage();
+          } else {
+            userId = snapshot.data!.uid;
+            context.read<CredProvider>().changeId(userId);
+            return displayScaffold(context, todosStream, userId);
+          }
+        });
+  }
+
+  Scaffold displayScaffold(
+    BuildContext context, Stream<QuerySnapshot<Object?>> todosStream, String userId) {
     return Scaffold(
-      drawer: drawer,
+      drawer: Drawer(
+          child: ListView(padding: const EdgeInsets.only(top: 50), children: [
+        ListTile(
+          title: const Text('Details'),
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const UserDetailsPage()));
+          },
+        ),
+        ListTile(
+          title: const Text('Logout'),
+          onTap: () {
+            context.read<MyAuthProvider>().signOut();
+            Navigator.pop(context);
+          },
+        ),
+      ])),
       appBar: AppBar(
         title: const Text("Todo"),
       ),
@@ -39,17 +101,19 @@ class _TodoPageState extends State<TodoPage> {
               child: Text("No Todos Found"),
             );
           }
-
           return ListView.builder(
             itemCount: snapshot.data?.docs.length,
             itemBuilder: ((context, index) {
               Todo todo = Todo.fromJson(
                   snapshot.data?.docs[index].data() as Map<String, dynamic>);
-              todo.id = snapshot.data?.docs[index].id;
+              if (todo.userId != userId) {
+                return const SizedBox();
+              } // cant return null apparently.
               return Dismissible(
                 key: Key(todo.id.toString()),
                 onDismissed: (direction) {
-                  context.read<TodoListProvider>().deleteTodo(todo.title);
+                  context.read<TodoListProvider>().changeSelectedTodo(todo);
+                  context.read<TodoListProvider>().deleteTodo();
 
                   ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('${todo.title} dismissed')));
@@ -63,9 +127,8 @@ class _TodoPageState extends State<TodoPage> {
                   leading: Checkbox(
                     value: todo.completed,
                     onChanged: (bool? value) {
-                      context
-                          .read<TodoListProvider>()
-                          .toggleStatus(todo.id!, value!);
+                      context.read<TodoListProvider>().changeSelectedTodo(todo);
+                      context.read<TodoListProvider>().toggleStatus(value!);
                     },
                   ),
                   trailing: Row(
@@ -73,11 +136,13 @@ class _TodoPageState extends State<TodoPage> {
                     children: [
                       IconButton(
                         onPressed: () {
+                          context
+                              .read<TodoListProvider>()
+                              .changeSelectedTodo(todo);
                           showDialog(
                             context: context,
                             builder: (BuildContext context) => TodoModal(
                               type: 'Edit',
-                              item: todo,
                             ),
                           );
                         },
@@ -85,11 +150,13 @@ class _TodoPageState extends State<TodoPage> {
                       ),
                       IconButton(
                         onPressed: () {
+                          context
+                              .read<TodoListProvider>()
+                              .changeSelectedTodo(todo);
                           showDialog(
                             context: context,
                             builder: (BuildContext context) => TodoModal(
                               type: 'Delete',
-                              item: todo,
                             ),
                           );
                         },
@@ -109,7 +176,6 @@ class _TodoPageState extends State<TodoPage> {
             context: context,
             builder: (BuildContext context) => TodoModal(
               type: 'Add',
-              item: null,
             ),
           );
         },
@@ -117,32 +183,5 @@ class _TodoPageState extends State<TodoPage> {
       ),
     );
   }
-
-  Drawer get drawer => Drawer(
-          child: ListView(padding: EdgeInsets.zero, children: [
-        const DrawerHeader(child: Text("Todo")),
-        ListTile(
-          title: const Text('Details'),
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const UserDetailsPage()));
-          },
-        ),
-        ListTile(
-          title: const Text('Todo List'),
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, "/");
-          },
-        ),
-        ListTile(
-          title: const Text('Logout'),
-          onTap: () {
-            context.read<UserAuthProvider>().signOut();
-            Navigator.pop(context);
-          },
-        ),
-      ]));
 }
+

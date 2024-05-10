@@ -1,92 +1,153 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/credential_provider.dart';
+import '../models/credential_model.dart';
 import '../providers/auth_provider.dart';
 
-class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+// SignupPage widget for user registration
+class SignupPage extends StatefulWidget {
+  const SignupPage({Key? key}) : super(key: key);
 
   @override
-  State<SignUpPage> createState() => _SignUpState();
+  _SignupPageState createState() => _SignupPageState();
 }
 
-class _SignUpState extends State<SignUpPage> {
+class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
-  String? email;
-  String? password;
 
   @override
   Widget build(BuildContext context) {
+    TextEditingController firstNameController = TextEditingController();
+    TextEditingController lastNameController = TextEditingController();
+    TextEditingController emailController = TextEditingController();
+    TextEditingController passwordController = TextEditingController();
+
+    // First name TextFormField
+    final firstName = TextFormField(
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return "Please enter a first name";
+        }
+        return null;
+      },
+      controller: firstNameController,
+      decoration: const InputDecoration(
+        hintText: "First Name",
+      ),
+    );
+
+    // Last name TextFormField
+    final lastName = TextFormField(
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return "Please enter a last name";
+        }
+        return null;
+      },
+      controller: lastNameController,
+      decoration: const InputDecoration(
+        hintText: "Last Name",
+      ),
+    );
+
+    // Email TextFormField
+    final email = TextFormField(
+      validator: (value) {
+        if (value == null || !(RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+")
+            .hasMatch(value))) {
+          return "Please enter a valid email";
+        }
+        return null;
+      },
+      controller: emailController,
+      decoration: const InputDecoration(
+        hintText: "Email",
+      ),
+    );
+
+    // Password TextFormField
+    final password = TextFormField(
+      validator: (value) {
+        if (value == null || !(value.length > 6)) {
+          return "Passwords must have more than 6 characters.";
+        }
+        return null;
+      },
+      controller: passwordController,
+      obscureText: true,
+      decoration: const InputDecoration(
+        hintText: 'Password',
+      ),
+    );
+
+    // Signup Button
+    final signupButton = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: ElevatedButton(
+        onPressed: () async {
+          if (context.mounted && _formKey.currentState!.validate()) {
+            String uid = await context.read<MyAuthProvider>().signUp(
+                emailController.text, passwordController.text);
+
+            context.read<CredProvider>().addUser(Credential(
+                  userId: uid,
+                  firstName: firstNameController.text,
+                  lastName: lastNameController.text,
+                  password: passwordController.text));
+
+            Navigator.pop(context);
+          }
+        },
+        child: const Text('Sign up', style: TextStyle(color: Colors.blue)),
+      ),
+    );
+
+    // Back Button
+    final backButton = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: ElevatedButton(
+        onPressed: () async {
+          Navigator.pop(context);
+        },
+        child: const Text('Back', style: TextStyle(color: Colors.blue)),
+      ),
+    );
+
     return Scaffold(
-      appBar: AppBar(),
-      body: SingleChildScrollView(
-        child: Container(
-            margin: const EdgeInsets.all(30),
-            child: Form(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(left: 40.0, right: 40.0),
+          children: <Widget>[
+            const Text(
+              "Sign Up",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 25),
+            ),
+            Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [heading, emailField, passwordField, submitButton],
+                children: [
+                  Row(
+                    children: [
+                      Flexible(child: firstName),
+                      const SizedBox(
+                        width: 20.0,
+                      ),
+                      Flexible(child: lastName),
+                    ],
+                  ),
+                  email,
+                  password,
+                ],
               ),
-            )),
+            ),
+            signupButton,
+            backButton
+          ],
+        ),
       ),
     );
   }
-
-  Widget get heading => const Padding(
-        padding: EdgeInsets.only(bottom: 30),
-        child: Text(
-          "Sign Up",
-          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-        ),
-      );
-
-  Widget get emailField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              label: Text("Email"),
-              hintText: "Enter a valid email"),
-          onSaved: (value) => setState(() => email = value),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter a valid email format";
-            }
-            return null;
-          },
-        ),
-      );
-
-  Widget get passwordField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              label: Text("Password"),
-              hintText: "At least 8 characters"),
-          obscureText: true,
-          onSaved: (value) => setState(() => password = value),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter a valid password";
-            }
-            return null;
-          },
-        ),
-      );
-
-  Widget get submitButton => ElevatedButton(
-      onPressed: () async {
-        if (_formKey.currentState!.validate()) {
-          _formKey.currentState!.save();
-          await context
-              .read<UserAuthProvider>()
-              .authService
-              .signUp(email!, password!);
-
-          // check if the widget hasn't been disposed of after an asynchronous action
-          if (mounted) Navigator.pop(context);
-        }
-      },
-      child: const Text("Sign Up"));
 }
